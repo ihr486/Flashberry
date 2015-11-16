@@ -1,21 +1,11 @@
-#define _XOPEN_SOURCE
-
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <termios.h>
-#include <fcntl.h>
+#include "flashberry.h"
 
 int main(int argc, char * const argv[])
 {
     unsigned int baud = 115200;
     const char *device = "/dev/ttyAMA0";
     const char *image = "-";
-    const char *target = "rl78g13";
+    const char *target = "none";
 
     int c = 0;
     while(c >= 0) {
@@ -44,12 +34,27 @@ int main(int argc, char * const argv[])
     struct termios newtio, oldtio;
     ioctl(port, TCGETS, &oldtio);
     newtio = oldtio;
+    newtio.c_iflag = 0;
     newtio.c_cflag = (B115200 | CS8 | CLOCAL | CREAD);
     newtio.c_oflag = 0;
-    newtio.c_lflag = ICANON;
+    newtio.c_lflag = 0;
     ioctl(port, TCSETS, &newtio);
 
     if(!strcmp(target, "rl78g13")) {
+        gpio_open(10);
+
+        gpio_set_direction(10, 1);
+
+        gpio_write(10, 0);
+
+        tcsendbreak(port, 2);
+
+        gpio_write(10, 1);
+
+        gpio_close(10);
+    } else if(!strcmp(target, "none")) {
+        fprintf(stderr, "Please specify a target device.\n");
+        return 1;
     } else {
         fprintf(stderr, "Unknown target: %s.\n", target);
         return 1;
