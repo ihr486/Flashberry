@@ -1,5 +1,14 @@
 #include "flashberry.h"
 
+jmp_buf jmp_context;
+
+void delay_ms(int ms)
+{
+    clock_t initial_clock = clock();
+
+    while((clock() - initial_clock) * 1000 < ms * CLOCKS_PER_SEC);
+}
+
 int main(int argc, char * const argv[])
 {
     unsigned int baud = 115200;
@@ -25,40 +34,44 @@ int main(int argc, char * const argv[])
         }
     }
 
-    int port = open(device, O_RDWR);
+    int port = open(device, O_RDWR | O_NONBLOCK);
     if(!port) {
         fprintf(stderr, "Failed to open %s.\n", device);
         return 1;
     }
 
     struct termios newtio, oldtio;
-    ioctl(port, TCGETS, &oldtio);
+    tcgetattr(port, &oldtio);
     newtio = oldtio;
-    newtio.c_iflag = 0;
-    newtio.c_cflag = (B115200 | CS8 | CLOCAL | CREAD);
+    newtio.c_iflag = IGNPAR | IGNBRK;
+    newtio.c_cflag = CS8 | CLOCAL | CREAD | CSTOPB;
     newtio.c_oflag = 0;
     newtio.c_lflag = 0;
-    ioctl(port, TCSETS, &newtio);
+    cfsetspeed(&newtio, 115200);
+    tcsetattr(port, TCSAFLUSH, &newtio);
 
-    if(!strcmp(target, "rl78g13")) {
-        gpio_open(10);
-
-        gpio_set_direction(10, 1);
-
-        gpio_write(10, 0);
-
-        tcsendbreak(port, 2);
-
-        gpio_write(10, 1);
-
-        gpio_close(10);
-    } else if(!strcmp(target, "none")) {
-        fprintf(stderr, "Please specify a target device.\n");
-        return 1;
+    int status = 0;
+    if(!(status = setjmp(jmp_context))) {
+        if(!strcmp(target, "rl78g13")) {
+            rl78g13_setup(port, false);
+        } else {
+            longjmp(jmp_context, ERROR_TARGET);
+        }
     } else {
-        fprintf(stderr, "Unknown target: %s.\n", target);
-        return 1;
+        switch(status) {
+        case ERROR_TARGET:
+            fprintf(stderr, "Unsupported target.\n");
+            break;
+        case ERROR_TIMEOUT:
+            fprintf(stderr, "Target does not respond.\n");
+            break;
+        case ERROR_CHECKSUM:
+            fprintf(stderr, "Wrong checksum on inward packet.\n");
+            break;
+        }
     }
+
+    tcsetattr(port, TCSAFLUSH, &oldtio);
 
     return 0;
 }

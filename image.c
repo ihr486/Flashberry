@@ -1,14 +1,5 @@
 #include "flashberry.h"
 
-#define BLOCK_SIZE (1024)
-#define BLANK_BYTE (0xFF)
-
-typedef struct image_block_tag {
-    struct image_block_tag *next;
-    uint32_t address;
-    uint8_t data[BLOCK_SIZE];
-} image_block_t;
-
 image_block_t *block_list = NULL, *cursor = NULL;
 
 static void image_set_byte(uint32_t address, uint8_t byte)
@@ -16,7 +7,7 @@ static void image_set_byte(uint32_t address, uint8_t byte)
     if(cursor && cursor->address <= address && address < cursor->address + BLOCK_SIZE) {
         cursor->data[address % BLOCK_SIZE] = byte;
     } else {
-        if(!cursor) {
+        if(!cursor || cursor->address > address) {
             cursor = block_list;
         }
         image_block_t *prev = NULL;
@@ -39,6 +30,20 @@ static void image_set_byte(uint32_t address, uint8_t byte)
         memset(new_block->data, BLANK_BYTE, BLOCK_SIZE);
         new_block->data[address % BLOCK_SIZE] = byte;
     }
+}
+
+const image_block_t *find_first_block(uint32_t low, uint32_t high)
+{
+    if(!cursor || cursor->address >= high) {
+        cursor = block_list;
+    }
+
+    for(; cursor; cursor = cursor->next) {
+        if(low <= cursor->address && cursor->address < high) {
+            return cursor;
+        }
+    }
+    return NULL;
 }
 
 static inline uint32_t read_hex4(FILE *fp)
