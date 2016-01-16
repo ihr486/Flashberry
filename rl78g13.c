@@ -121,6 +121,43 @@ static uint8_t *receive_packet(int port)
     return packet;
 }
 
+static uint8_t check_status(uint8_t code)
+{
+    switch(code) {
+    case 0x04:
+        fprintf(stderr, "Target reported status 0x04: \"Unsupported command\".\n");
+        break;
+    case 0x05:
+        fprintf(stderr, "Target reported status 0x05: \"Illegal parameter\".\n");
+        break;
+    case 0x06:
+        return 0x06;
+    case 0x07:
+        fprintf(stderr, "Target reported status 0x07: \"Checksum mismatch\".\n");
+        break;
+    case 0x0F:
+        fprintf(stderr, "Target reported status 0x0F: \"Verify error\".\n");
+        break;
+    case 0x10:
+        fprintf(stderr, "Target reported status 0x10: \"Protection error\".\n");
+        break;
+    case 0x15:
+        return 0x15;
+    case 0x1A:
+        fprintf(stderr, "Target reported status 0x1A: \"Erase error\".\n");
+        break;
+    case 0x1B:
+        return 0x1B;
+    case 0x1C:
+        fprintf(stderr, "Target reported status 0x1C: \"Write error\".\n");
+        break;
+    default:
+        fprintf(stderr, "Target reported unknown status.\n");
+        break;
+    }
+    longjmp(jmp_context, ERROR_PROTOCOL);
+}
+
 void rl78g13_reset(int port)
 {
     uint8_t *command = create_command_packet(0, 0x00);
@@ -128,6 +165,38 @@ void rl78g13_reset(int port)
     send_packet(port, command);
 
     uint8_t *status = receive_packet(port);
+
+    check_status(status[2]);
+}
+
+void rl78g13_baudrate_set(int port, int baudrate, float voltage)
+{
+    uint8_t *command = create_command_packet(2, 0x9A);
+
+    switch(baudrate) {
+    case 115200:
+        command[3] = 0;
+        break;
+    case 250000:
+        command[3] = 1;
+        break;
+    case 500000:
+        command[3] = 2;
+        break;
+    case 1000000:
+        command[3] = 3;
+        break;
+    default:
+        longjmp(jmp_context, ERROR_BAUDRATE);
+    }
+
+    command[4] = (int)(voltage * 10.0f);
+
+    send_packet(port, command);
+
+    uint8_t *status = receive_packet(port);
+
+    check_status(status[2]);
 }
 
 void rl78g13_setup(int port, bool single_wire_flag)

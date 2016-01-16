@@ -16,9 +16,13 @@ int main(int argc, char * const argv[])
     const char *image = "-";
     const char *target = "none";
 
+    bool erase_flag = false, write_flag = false, verify_flag = false;
+    bool single_wire_flag = false;
+    float voltage = 5;
+
     int c = 0;
     while(c >= 0) {
-        switch(c = getopt(argc, argv, "b:d:f:t:")) {
+        switch(c = getopt(argc, argv, "b:d:f:t:vwel:s")) {
         case 'b':
             baud = atoi(optarg);
             break;
@@ -30,6 +34,21 @@ int main(int argc, char * const argv[])
             break;
         case 't':
             target = optarg;
+            break;
+        case 'e':
+            erase_flag = true;
+            break;
+        case 'w':
+            write_flag = true;
+            break;
+        case 'v':
+            verify_flag = true;
+            break;
+        case 'l':
+            voltage = atof(optarg);
+            break;
+        case 's':
+            single_wire_flag = true;
             break;
         }
     }

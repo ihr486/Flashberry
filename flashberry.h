@@ -2,6 +2,7 @@
 #define FLASHBERRY_H
 
 #define _XOPEN_SOURCE
+#define _BSD_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,7 +54,9 @@ void rl78g13_setup(int port, bool single_wire_flag);
 enum {
     ERROR_TARGET = 1,
     ERROR_TIMEOUT,
-    ERROR_CHECKSUM
+    ERROR_CHECKSUM,
+    ERROR_BAUDRATE,
+    ERROR_PROTOCOL
 };
 
 #endif
