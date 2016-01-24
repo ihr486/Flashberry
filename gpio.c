@@ -14,40 +14,7 @@ typedef volatile struct
     uint32_t reserved1;
     uint32_t GPCLR0;
     uint32_t GPCLR1;
-    uint32_t reserved2;
-    uint32_t GPLEV0;
-    uint32_t GPLEV1;
-    uint32_t reserved3;
-    uint32_t GPEDS0;
-    uint32_t GPEDS1;
-    uint32_t reserved4;
-    uint32_t GPREN0;
-    uint32_t GPREN1;
-    uint32_t reserved5;
-    uint32_t GPFEN0;
-    uint32_t GPFEN1;
-    uint32_t reserved6;
-    uint32_t GPHEN0;
-    uint32_t GPHEN1;
-    uint32_t reserved7;
-    uint32_t GPLEN0;
-    uint32_t GPLEN1;
-    uint32_t reserved8;
-    uint32_t GPAREN0;
-    uint32_t GPAREN1;
-    uint32_t reserved9;
-    uint32_t GPAFEN0;
-    uint32_t GPAFEN1;
-    uint32_t reserved10;
-    uint32_t GPPUD;
-    uint32_t GPPUDCLK0;
-    uint32_t GPPUDCLK1;
 } GPIO_Struct;
-
-typedef struct {
-    int fd;
-    GPIO_Struct *reg;
-} GPIO_Handle;
 
 static GPIO_Struct *GPIO;
 
@@ -94,16 +61,6 @@ void gpio_configure(int pin, int function)
         GPIO->GPFSEL5 &= ~(7 << ((pin - 50) * 3));
         GPIO->GPFSEL5 |= (function & 7) << ((pin - 50) * 3);
     }
-}
-
-int gpio_get_state(int pin)
-{
-    if(0 <= pin && pin < 32) {
-        return !!(GPIO->GPLEV0 & (1 << pin));
-    } else if(32 <= pin && pin <= 53) {
-        return !!(GPIO->GPLEV1 & (1 << (pin - 32)));
-    }
-    return 0;
 }
 
 void gpio_set_state(int pin, int state)

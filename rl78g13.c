@@ -1,14 +1,19 @@
 #include "flashberry.h"
-#include "util.h"
+
+static inline uint32_t unpack_LE24(const uint8_t *buf)
+{
+    return (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) | ((uint32_t)buf[2] << 16);
+}
+
+static inline void pack_LE24(uint8_t *buf, uint32_t val)
+{
+    buf[0] = val & 0x0000FF;
+    buf[1] = (val >> 8) & 0x0000FF;
+    buf[2] = (val >> 16) & 0x0000FF;
+}
 
 static uint32_t code_flash_start = 0, code_flash_end = 0;
 static uint32_t data_flash_start = 0xF1000, data_flash_end = 0;
-
-typedef enum {
-    RL78_COMMAND_PACKET,
-    RL78_DATA_BODY,
-    RL78_DATA_TRAILER
-} rl78_packet_type_t;
 
 static uint8_t *create_command_packet(int size, uint8_t command)
 {
@@ -122,7 +127,7 @@ static uint8_t check_status(uint8_t code)
     longjmp(jmp_context, ERROR_PROTOCOL);
 }
 
-void rl78g13_reset(void)
+static void rl78g13_reset(void)
 {
     uint8_t *command = create_command_packet(0, 0x00);
 
@@ -137,7 +142,7 @@ void rl78g13_reset(void)
     printf("Reset complete.\n");
 }
 
-void rl78g13_baudrate_set(int baudrate, float voltage)
+static void rl78g13_baudrate_set(int baudrate, float voltage)
 {
     uint8_t *command = create_command_packet(2, 0x9A);
 
@@ -166,14 +171,42 @@ void rl78g13_baudrate_set(int baudrate, float voltage)
 
     check_status(status[2]);
 
-    uart_set_baudrate(baudrate);
-
     destroy_packet(status);
 
     printf("Baudrate set complete.\n");
 }
 
-void rl78g13_setup(bool single_wire_flag)
+static void rl78g13_silicon_signature(void)
+{
+    uint8_t *command = create_command_packet(0, 0xC0);
+
+    send_packet(command);
+
+    uint8_t *status = receive_packet();
+
+    check_status(status[2]);
+
+    destroy_packet(status);
+
+    uint8_t *data = receive_packet();
+
+    uint32_t device_code = unpack_LE24(&data[2]);
+
+    code_flash_end = unpack_LE24(&data[15]);
+    data_flash_end = unpack_LE24(&data[18]);
+
+    uint8_t device_name[11];
+    memcpy(device_name, &data[5], 10);
+
+    device_name[10] = 0;
+
+    printf("Device information:\n\tCode = %06X\n\tName = %s\n\tFirmware version = %01hhu.%01hhu%01hhu\n", device_code, device_name, data[21], data[22], data[23]);
+    printf("\tCode Flash : 0x%05X -> 0x%05X\n\tData Flash : 0x%05X -> 0x%05X\n", code_flash_start, code_flash_end, data_flash_start, data_flash_end);
+
+    destroy_packet(data);
+}
+
+void rl78g13_setup(float voltage, bool single_wire_flag)
 {
     gpio_open();
 
@@ -212,39 +245,15 @@ void rl78g13_setup(bool single_wire_flag)
     delay_ms(1);
 
     printf("Setup complete.\n");
+
+    rl78g13_baudrate_set(115200, voltage);
+
+    rl78g13_reset();
+
+    rl78g13_silicon_signature();
 }
 
-void rl78g13_silicon_signature(void)
-{
-    uint8_t *command = create_command_packet(0, 0xC0);
-
-    send_packet(command);
-
-    uint8_t *status = receive_packet();
-
-    check_status(status[2]);
-
-    destroy_packet(status);
-
-    uint8_t *data = receive_packet();
-
-    uint32_t device_code = unpack_LE24(&data[2]);
-
-    code_flash_end = unpack_LE24(&data[15]);
-    data_flash_end = unpack_LE24(&data[18]);
-
-    uint8_t device_name[11];
-    memcpy(device_name, &data[5], 10);
-
-    device_name[10] = 0;
-
-    printf("Device information:\n\tCode = %06X\n\tName = %s\n\tFirmware version = %01hhu.%01hhu%01hhu\n", device_code, device_name, data[21], data[22], data[23]);
-    printf("\tCode Flash : 0x%05X -> 0x%05X\n\tData Flash : 0x%05X -> 0x%05X\n", code_flash_start, code_flash_end, data_flash_start, data_flash_end);
-
-    destroy_packet(data);
-}
-
-void rl78g13_block_erase(const image_block_t *block)
+static void rl78g13_block_erase(const image_block_t *block)
 {
     uint8_t *command = create_command_packet(3, 0x22);
 
@@ -259,7 +268,7 @@ void rl78g13_block_erase(const image_block_t *block)
     destroy_packet(status);
 }
 
-void rl78g13_programming(const image_block_t *block)
+static void rl78g13_programming(const image_block_t *block)
 {
     uint8_t *command = create_command_packet(6, 0x40);
 
@@ -296,7 +305,7 @@ void rl78g13_programming(const image_block_t *block)
     destroy_packet(status);
 }
 
-void rl78g13_verify(const image_block_t *block)
+static void rl78g13_verify(const image_block_t *block)
 {
     uint8_t *command = create_command_packet(6, 0x13);
 

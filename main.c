@@ -11,7 +11,7 @@ void delay_ms(int ms)
 
 static bool write_flag = false, verify_flag = false;
 static bool single_wire_flag = false, reset_flag = false, check_flag = false;
-static float voltage = 5;
+static float voltage = 5.0f;
 
 static void gpio_reset(void)
 {
@@ -66,13 +66,7 @@ int main(int argc, char * const argv[])
         if(check_flag || write_flag || verify_flag) {
             uart_open();
 
-            rl78g13_setup(single_wire_flag);
-
-            rl78g13_baudrate_set(115200, voltage);
-
-            rl78g13_reset();
-
-            rl78g13_silicon_signature();
+            rl78g13_setup(voltage, single_wire_flag);
 
             if(write_flag) {
                 rl78g13_write_all();

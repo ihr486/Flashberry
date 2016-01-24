@@ -72,11 +72,3 @@ void uart_close(void)
         close(port);
     }
 }
-
-void uart_set_baudrate(int rate)
-{
-    struct termios newtio;
-    tcgetattr(port, &newtio);
-    cfsetspeed(&newtio, rate);
-    tcsetattr(port, TCSAFLUSH, &newtio);
-}

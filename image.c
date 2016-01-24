@@ -118,21 +118,3 @@ int read_intel_hex(const char *filename)
     fclose(fp);
     return 0;
 }
-
-void dump_image(void)
-{
-    for(const image_block_t *p = block_list; p; p = p->next) {
-        for(int i = 0; i < BLOCK_SIZE; i++) {
-            if(i % 16 == 0) {
-                printf("%05X: ", p->address + i);
-            }
-            printf("%02X", p->data[i]);
-            if(i % 16 == 15) {
-                printf("\n");
-            } else {
-                printf(" ");
-            }
-        }
-        printf("\n");
-    }
-}
