@@ -36,10 +36,7 @@ int main(int argc, char * const argv[])
 
     int c = 0;
     while(c >= 0) {
-        switch(c = getopt(argc, argv, "f:vwl:shcr")) {
-        case 'f':
-            read_intel_hex(optarg);
-            break;
+        switch(c = getopt(argc, argv, "-vwl:scr")) {
         case 'w':
             write_flag = true;
             break;
@@ -58,6 +55,12 @@ int main(int argc, char * const argv[])
         case 'c':
             check_flag = true;
             break;
+        case 1:
+            read_intel_hex(optarg);
+            break;
+        case '?':
+            printf("Usage: flashberry {-w(rite) -v(erify) -r(eset) -c(heck)} [-s(ingle)] [-l(evel)[VOLTAGE=5.0]] [IMAGE FILES]\n");
+            return 1;
         }
     }
 
