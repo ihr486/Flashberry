@@ -10,29 +10,23 @@ void delay_ms(int ms)
 }
 
 static unsigned int baud = 115200;
-static char image[256] = "";
-static char target[16] = "none";
 
-static bool erase_flag = false, write_flag = false, verify_flag = false;
-static bool single_wire_flag = false;
+static bool write_flag = false, verify_flag = false;
+static bool single_wire_flag = false, reset_flag = false, check_flag = false;
 static float voltage = 5;
 
 int main(int argc, char * const argv[])
 {
+    printf("Flashberry v0.1 written by Hiroka Ihara (ihr486)\n");
+
     int c = 0;
     while(c >= 0) {
-        switch(c = getopt(argc, argv, "b:d:f:t:vwel:s")) {
+        switch(c = getopt(argc, argv, "b:f:vwl:shcr")) {
         case 'b':
             baud = atoi(optarg);
             break;
         case 'f':
-            strcpy(image, optarg);
-            break;
-        case 't':
-            strcpy(target, optarg);
-            break;
-        case 'e':
-            erase_flag = true;
+            read_intel_hex(optarg);
             break;
         case 'w':
             write_flag = true;
@@ -46,12 +40,18 @@ int main(int argc, char * const argv[])
         case 's':
             single_wire_flag = true;
             break;
+        case 'r':
+            reset_flag = true;
+            break;
+        case 'c':
+            check_flag = true;
+            break;
         }
     }
 
     int status = 0;
     if(!(status = setjmp(jmp_context))) {
-        if(!strcmp(target, "rl78g13")) {
+        if(check_flag || write_flag || verify_flag) {
             rl78g13_setup(single_wire_flag);
 
             rl78g13_baudrate_set(baud, voltage);
@@ -59,8 +59,27 @@ int main(int argc, char * const argv[])
             rl78g13_reset();
 
             rl78g13_silicon_signature();
-        } else {
-            longjmp(jmp_context, ERROR_TARGET);
+
+            if(write_flag) {
+                rl78g13_write_all();
+            }
+            if(verify_flag) {
+                rl78g13_verify_all();
+            }
+        } else if(reset_flag) {
+            gpio_open();
+
+            gpio_configure(RESET_PIN, GPIO_OUT);
+
+            gpio_set_state(RESET_PIN, GPIO_LO);
+
+            delay_ms(1);
+
+            gpio_set_state(RESET_PIN, GPIO_HI);
+
+            gpio_configure(RESET_PIN, GPIO_IN);
+
+            gpio_close();
         }
     } else {
         switch(status) {

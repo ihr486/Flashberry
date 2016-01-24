@@ -119,44 +119,20 @@ int read_intel_hex(const char *filename)
     return 0;
 }
 
-int read_s_record(const char *filename)
+void dump_image(void)
 {
-    FILE *fp = fopen(filename, "r");
-    if(!fp) return -1;
-
-    while(1) {
-        int c = fgetc(fp);
-
-        if(c == EOF) break;
-
-        if(c == 'S') {
-            char record_type = fgetc(fp);
-
-            uint8_t record_length = read_hex8(fp);
-
-            uint32_t address = 0;
-
-            switch(record_type) {
-            case '1':
-                address = read_hex16(fp);
-                record_length -= 2;
-                break;
-            case '2':
-                address = read_hex24(fp);
-                record_length -= 3;
-                break;
-            case '3':
-                address = read_hex32(fp);
-                record_length -= 4;
-                break;
+    for(const image_block_t *p = block_list; p; p = p->next) {
+        for(int i = 0; i < BLOCK_SIZE; i++) {
+            if(i % 16 == 0) {
+                printf("%05X: ", p->address + i);
             }
-
-            for(int i = 0; i < record_length - 1; i++) {
-                image_set_byte(address + i, read_hex8(fp));
+            printf("%02X", p->data[i]);
+            if(i % 16 == 15) {
+                printf("\n");
+            } else {
+                printf(" ");
             }
         }
+        printf("\n");
     }
-
-    fclose(fp);
-    return 0;
 }

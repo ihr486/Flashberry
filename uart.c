@@ -37,7 +37,6 @@ int uart_read_bytes(void *buf, int n)
             longjmp(jmp_context, ERROR_TIMEOUT);
         }
     }
-    printf("%d bytes read.\n", n);
     return n;
 }
 
@@ -51,7 +50,6 @@ int uart_write_bytes(void *buf, int n)
             longjmp(jmp_context, ERROR_TIMEOUT);
         }
     }
-    printf("%d bytes written.\n", n);
     return n;
 }
 

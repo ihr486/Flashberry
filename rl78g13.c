@@ -44,15 +44,11 @@ static void destroy_packet(void *packet)
 
 static void send_packet(uint8_t *packet)
 {
-    int n = (int)(packet[1] - 1) + 1;
+    int n = ((packet[1] - 1) & 0xFF) + 1;
     packet[n + 2] = 0;
     for(int i = 0; i < n + 1; i++) {
         packet[n + 2] -= packet[1 + i];
     }
-    for(int i = 0; i < n + 4; i++) {
-        printf("%02X ", packet[i]);
-    }
-    printf("\n");
     uart_write_bytes(packet, n + 4);
     destroy_packet(packet);
 }
@@ -85,11 +81,6 @@ static uint8_t *receive_packet(void)
     if(checksum) {
         longjmp(jmp_context, ERROR_CHECKSUM);
     }
-
-    for(int i = 0; i < n + 4; i++) {
-        printf("%02X ", packet[i]);
-    }
-    printf("\n");
 
     return packet;
 }
@@ -251,4 +242,206 @@ void rl78g13_silicon_signature(void)
 
     printf("Device information:\n\tCode = %06X\n\tName = %s\n\tFirmware version = %01hhu.%01hhu%01hhu\n", device_code, device_name, data[21], data[22], data[23]);
     printf("\tCode Flash : 0x%05X -> 0x%05X\n\tData Flash : 0x%05X -> 0x%05X\n", code_flash_start, code_flash_end, data_flash_start, data_flash_end);
+
+    destroy_packet(data);
+}
+
+void rl78g13_block_erase(const image_block_t *block)
+{
+    uint8_t *command = create_command_packet(3, 0x22);
+
+    pack_LE24(&command[3], block->address);
+
+    send_packet(command);
+
+    uint8_t *status = receive_packet();
+
+    check_status(status[2]);
+
+    destroy_packet(status);
+}
+
+void rl78g13_programming(const image_block_t *block)
+{
+    uint8_t *command = create_command_packet(6, 0x40);
+
+    pack_LE24(&command[3], block->address);
+    pack_LE24(&command[6], block->address + BLOCK_SIZE - 1);
+
+    send_packet(command);
+
+    uint8_t *status = receive_packet();
+
+    check_status(status[2]);
+
+    destroy_packet(status);
+
+    for(int i = 0; i < 4; i++) {
+        uint8_t *data = create_data_packet(256, i == 3);
+
+        memcpy(data + 2, block->data + (256 * i), 256);
+
+        send_packet(data);
+
+        status = receive_packet();
+
+        check_status(status[2]);
+        check_status(status[3]);
+
+        destroy_packet(status);
+    }
+
+    status = receive_packet();
+
+    check_status(status[2]);
+
+    destroy_packet(status);
+}
+
+void rl78g13_verify(const image_block_t *block)
+{
+    uint8_t *command = create_command_packet(6, 0x13);
+
+    pack_LE24(&command[3], block->address);
+    pack_LE24(&command[6], block->address + BLOCK_SIZE - 1);
+
+    send_packet(command);
+
+    uint8_t *status = receive_packet();
+
+    check_status(status[2]);
+
+    destroy_packet(status);
+
+    for(int i = 0; i < 4; i++) {
+        uint8_t *data = create_data_packet(256, i == 3);
+
+        memcpy(data + 2, block->data + (256 * i), 256);
+
+        send_packet(data);
+
+        status = receive_packet();
+
+        check_status(status[2]);
+        check_status(status[3]);
+
+        destroy_packet(status);
+    }
+}
+
+bool rl78g13_block_blankcheck(const image_block_t *block)
+{
+    uint8_t *command = create_command_packet(7, 0x32);
+
+    pack_LE24(&command[3], block->address);
+    pack_LE24(&command[6], block->address + BLOCK_SIZE - 1);
+    command[9] = 0;
+
+    send_packet(command);
+
+    uint8_t *status = receive_packet();
+
+    uint8_t ret = check_status(status[2]);
+
+    destroy_packet(status);
+
+    return ret == 0x06;
+}
+
+void rl78g13_write_all(void)
+{
+    if(code_flash_start >= code_flash_end) {
+        printf("Code Flash is not present on this device.\n");
+    } else {
+        uint32_t low = code_flash_start, high = code_flash_end;
+
+        while(low < high) {
+            const image_block_t *block = find_first_block(low, high);
+
+            if(!block) break;
+
+            if(rl78g13_block_blankcheck(block)) {
+                printf("Block %05X is blank.\n", block->address);
+            } else {
+                rl78g13_block_erase(block);
+
+                printf("Block %05X erased.\n", block->address);
+            }
+
+            rl78g13_programming(block);
+
+            printf("Block %05X programmed.\n", block->address);
+
+            low = block->address + BLOCK_SIZE;
+        }
+    }
+
+    if(data_flash_start >= data_flash_end) {
+        printf("Data Flash is not present on this device.\n");
+    } else {
+        uint32_t low = data_flash_start, high = data_flash_end;
+
+        while(low < high) {
+            const image_block_t *block = find_first_block(low, high);
+
+            if(!block) break;
+
+            if(rl78g13_block_blankcheck(block)) {
+                printf("Block %05X is blank.\n", block->address);
+            } else {
+                rl78g13_block_erase(block);
+
+                printf("Block %05X erased.\n", block->address);
+            }
+
+            rl78g13_programming(block);
+
+            printf("Block %05X programmed.\n", block->address);
+
+            low = block->address + BLOCK_SIZE;
+        }
+    }
+
+    printf("Programming complete.\n");
+}
+
+void rl78g13_verify_all(void)
+{
+    if(code_flash_start >= code_flash_end) {
+        printf("Code Flash is not present on this device.\n");
+    } else {
+        uint32_t low = code_flash_start, high = code_flash_end;
+
+        while(low < high) {
+            const image_block_t *block = find_first_block(low, high);
+
+            if(!block) break;
+
+            rl78g13_verify(block);
+
+            printf("Block %05X verified.\n", block->address);
+
+            low = block->address + BLOCK_SIZE;
+        }
+    }
+
+    if(data_flash_start >= data_flash_end) {
+        printf("Data Flash is not present on this device.\n");
+    } else {
+        uint32_t low = data_flash_start, high = data_flash_end;
+
+        while(low < high) {
+            const image_block_t *block = find_first_block(low, high);
+
+            if(!block) break;
+
+            rl78g13_verify(block);
+
+            printf("Block %05X verified.\n", block->address);
+
+            low = block->address + BLOCK_SIZE;
+        }
+    }
+
+    printf("Verify complete.\n");
 }

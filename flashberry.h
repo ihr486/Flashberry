@@ -49,8 +49,8 @@ typedef struct image_block_tag {
 } image_block_t;
 
 int read_intel_hex(const char *filename);
-int read_s_record(const char *filename);
 const image_block_t *find_first_block(uint32_t low, uint32_t high);
+void dump_image(void);
 
 extern jmp_buf jmp_context;
 
@@ -60,6 +60,12 @@ void rl78g13_setup(bool single_wire_flag);
 void rl78g13_baudrate_set(int baudrate, float voltage);
 void rl78g13_reset(void);
 void rl78g13_silicon_signature(void);
+void rl78g13_block_erase(const image_block_t *block);
+void rl78g13_programming(const image_block_t *block);
+void rl78g13_verify(const image_block_t *block);
+bool rl78g13_block_blankcheck(const image_block_t *block);
+void rl78g13_write_all(void);
+void rl78g13_verify_all(void);
 
 #define RESET_PIN (4)
 #define TXD_PIN (14)
