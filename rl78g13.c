@@ -176,7 +176,6 @@ void rl78g13_baudrate_set(int baudrate, float voltage)
 void rl78g13_setup(bool single_wire_flag)
 {
     gpio_open();
-    uart_close();
 
     gpio_configure(RESET_PIN, GPIO_OUT);
     gpio_configure(TXD_PIN, GPIO_OUT);
@@ -201,7 +200,6 @@ void rl78g13_setup(bool single_wire_flag)
     gpio_configure(TXD_PIN, 4);
 
     gpio_close();
-    uart_open();
 
     delay_ms(1);
 

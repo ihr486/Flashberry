@@ -52,6 +52,8 @@ int main(int argc, char * const argv[])
     int status = 0;
     if(!(status = setjmp(jmp_context))) {
         if(check_flag || write_flag || verify_flag) {
+            uart_open();
+
             rl78g13_setup(single_wire_flag);
 
             rl78g13_baudrate_set(baud, voltage);
@@ -66,6 +68,8 @@ int main(int argc, char * const argv[])
             if(verify_flag) {
                 rl78g13_verify_all();
             }
+
+            uart_close();
         } else if(reset_flag) {
             gpio_open();
 
