@@ -15,6 +15,23 @@ static bool write_flag = false, verify_flag = false;
 static bool single_wire_flag = false, reset_flag = false, check_flag = false;
 static float voltage = 5;
 
+static void gpio_reset(void)
+{
+    gpio_open();
+
+    gpio_configure(RESET_PIN, GPIO_OUT);
+
+    gpio_set_state(RESET_PIN, GPIO_LO);
+
+    delay_ms(1);
+
+    gpio_set_state(RESET_PIN, GPIO_HI);
+
+    gpio_configure(RESET_PIN, GPIO_IN);
+
+    gpio_close();
+}
+
 int main(int argc, char * const argv[])
 {
     printf("Flashberry v0.1 written by Hiroka Ihara (ihr486)\n");
@@ -70,20 +87,10 @@ int main(int argc, char * const argv[])
             }
 
             uart_close();
+
+            gpio_reset();
         } else if(reset_flag) {
-            gpio_open();
-
-            gpio_configure(RESET_PIN, GPIO_OUT);
-
-            gpio_set_state(RESET_PIN, GPIO_LO);
-
-            delay_ms(1);
-
-            gpio_set_state(RESET_PIN, GPIO_HI);
-
-            gpio_configure(RESET_PIN, GPIO_IN);
-
-            gpio_close();
+            gpio_reset();
         }
     } else {
         switch(status) {
