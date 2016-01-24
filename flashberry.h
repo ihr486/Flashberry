@@ -18,17 +18,25 @@
 #include <stdint.h>
 #include <time.h>
 #include <setjmp.h>
+#include <sys/mman.h>
 
 #define GPIO_IN (0)
 #define GPIO_OUT (1)
 #define GPIO_LO (0)
 #define GPIO_HI (1)
 
-void gpio_open(int pin);
-void gpio_set_direction(int pin, int direction);
-int gpio_read(int pin);
-void gpio_write(int pin, int state);
-void gpio_close(int pin);
+void gpio_open(void);
+void gpio_close(void);
+void gpio_configure(int pin, int function);
+int gpio_get_state(int pin);
+void gpio_set_state(int pin, int state);
+
+void uart_open(void);
+void uart_close(void);
+int uart_read_bytes(void *buf, int n);
+int uart_write_bytes(void *buf, int n);
+uint8_t uart_read_byte(void);
+void uart_write_byte(uint8_t c);
 
 #define BLOCK_SIZE (1024)
 #define BLANK_BYTE (0xFF)
@@ -47,16 +55,20 @@ extern jmp_buf jmp_context;
 
 void delay_ms(int ms);
 
-void rl78g13_setup(int port, bool single_wire_flag);
+void rl78g13_setup(bool single_wire_flag);
+void rl78g13_baudrate_set(int baudrate, float voltage);
 
-#define RESET_PIN (10)
+#define RESET_PIN (4)
+#define TXD_PIN (14)
+#define RXD_PIN (15)
 
 enum {
     ERROR_TARGET = 1,
     ERROR_TIMEOUT,
     ERROR_CHECKSUM,
     ERROR_BAUDRATE,
-    ERROR_PROTOCOL
+    ERROR_PROTOCOL,
+    ERROR_IO
 };
 
 #endif

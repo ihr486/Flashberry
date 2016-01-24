@@ -1,45 +1,5 @@
 #include "flashberry.h"
 
-#define TIMEOUT_MS (2000)
-
-static int read_bytes(int port, void *buf, int n)
-{
-    clock_t initial_clock = clock();
-    for(int i = 0; i < n;) {
-        i += read(port, (uint8_t *)buf + i, n - i);
-
-        if((clock() - initial_clock) * 1000 > TIMEOUT_MS * CLOCKS_PER_SEC) {
-            longjmp(jmp_context, ERROR_TIMEOUT);
-        }
-    }
-    return n;
-}
-
-static int write_bytes(int port, void *buf, int n)
-{
-    clock_t initial_clock = clock();
-    for(int i = 0; i < n;) {
-        i += write(port, (uint8_t *)buf + i, n - i);
-
-        if((clock() - initial_clock) * 1000 > TIMEOUT_MS * CLOCKS_PER_SEC) {
-            longjmp(jmp_context, ERROR_TIMEOUT);
-        }
-    }
-    return n;
-}
-
-static uint8_t read_byte(int port)
-{
-    uint8_t ret;
-    read_bytes(port, &ret, 1);
-    return ret;
-}
-
-static void write_byte(int port, char c)
-{
-    write_bytes(port, &c, 1);
-}
-
 typedef enum {
     RL78_COMMAND_PACKET,
     RL78_DATA_BODY,
@@ -78,26 +38,30 @@ static void destroy_packet(void *packet)
     free(packet);
 }
 
-static void send_packet(int port, uint8_t *packet)
+static void send_packet(uint8_t *packet)
 {
     int n = (int)(packet[1] - 1) + 1;
     packet[n + 2] = 0;
-    for(int i = 0; i < n; i++) {
-        packet[n + 2] += packet[2 + i];
+    for(int i = 0; i < n + 1; i++) {
+        packet[n + 2] -= packet[1 + i];
     }
-    write_bytes(port, packet, n);
+    for(int i = 0; i < n + 4; i++) {
+        printf("%02X ", packet[i]);
+    }
+    printf("\n");
+    uart_write_bytes(packet, n + 4);
     destroy_packet(packet);
 }
 
-static uint8_t *receive_packet(int port)
+static uint8_t *receive_packet(void)
 {
     uint8_t type = 0;
 
     while(type != 0x01 && type != 0x02) {
-        type = read_byte(port);
+        type = uart_read_byte();
     }
 
-    uint8_t length = read_byte(port);
+    uint8_t length = uart_read_byte();
 
     int n = ((length - 1) & 0xFF) + 1;
 
@@ -106,7 +70,7 @@ static uint8_t *receive_packet(int port)
     packet[0] = type;
     packet[1] = length;
 
-    read_bytes(port, &packet[2], n + 2);
+    uart_read_bytes(&packet[2], n + 2);
 
     uint8_t checksum = 0;
 
@@ -158,18 +122,18 @@ static uint8_t check_status(uint8_t code)
     longjmp(jmp_context, ERROR_PROTOCOL);
 }
 
-void rl78g13_reset(int port)
+void rl78g13_reset(void)
 {
     uint8_t *command = create_command_packet(0, 0x00);
 
-    send_packet(port, command);
+    send_packet(command);
 
-    uint8_t *status = receive_packet(port);
+    uint8_t *status = receive_packet();
 
     check_status(status[2]);
 }
 
-void rl78g13_baudrate_set(int port, int baudrate, float voltage)
+void rl78g13_baudrate_set(int baudrate, float voltage)
 {
     uint8_t *command = create_command_packet(2, 0x9A);
 
@@ -192,40 +156,54 @@ void rl78g13_baudrate_set(int port, int baudrate, float voltage)
 
     command[4] = (int)(voltage * 10.0f);
 
-    send_packet(port, command);
+    send_packet(command);
 
-    uint8_t *status = receive_packet(port);
+    uint8_t *status = receive_packet();
 
     check_status(status[2]);
+
+    printf("Baudrate set complete.\n");
 }
 
-void rl78g13_setup(int port, bool single_wire_flag)
+void rl78g13_setup(bool single_wire_flag)
 {
-    gpio_open(RESET_PIN);
+    gpio_open();
+    uart_close();
 
-    gpio_set_direction(RESET_PIN, GPIO_OUT);
+    gpio_configure(RESET_PIN, GPIO_OUT);
+    gpio_configure(TXD_PIN, GPIO_OUT);
 
-    gpio_write(RESET_PIN, GPIO_LO);
+    gpio_set_state(RESET_PIN, GPIO_LO);
 
-    delay_ms(5);
+    delay_ms(10);
 
-    ioctl(port, TIOCSBRK);
+    gpio_set_state(TXD_PIN, GPIO_LO);
 
-    delay_ms(5);
+    delay_ms(10);
 
-    gpio_write(RESET_PIN, GPIO_HI);
+    gpio_set_state(RESET_PIN, GPIO_HI);
 
-    delay_ms(5);
+    delay_ms(10);
 
-    ioctl(port, TIOCCBRK);
+    gpio_set_state(TXD_PIN, GPIO_HI);
 
-    delay_ms(5);
+    delay_ms(10);
 
-    gpio_close(RESET_PIN);
+    gpio_configure(RESET_PIN, GPIO_IN);
+    gpio_configure(TXD_PIN, 4);
+
+    gpio_close();
+    uart_open();
+
+    delay_ms(10);
 
     if(single_wire_flag) {
-        write_byte(port, 0x3A);
+        uart_write_byte(0x3A);
     } else {
-        write_byte(port, 0x00);
+        uart_write_byte(0x00);
     }
+
+    delay_ms(10);
+
+    printf("Setup complete.\n");
 }

@@ -1,6 +1,8 @@
 CSRCS := $(wildcard *.c)
 COBJS := $(CSRCS:%.c=%.o)
 
+HDRS := $(wildcard *.h)
+
 OBJS := $(COBJS)
 BIN := flashberry
 
@@ -24,5 +26,5 @@ install: $(BIN)
 $(BIN): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-%.o: %.c
+%.o: %.c $(HDRS)
 	$(CC) $(CFLAGS) -c -o $@ $<
