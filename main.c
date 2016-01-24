@@ -10,8 +10,8 @@ void delay_ms(int ms)
 }
 
 static unsigned int baud = 115200;
-static const char *image = "-";
-static const char *target = "none";
+static char image[256] = "";
+static char target[16] = "none";
 
 static bool erase_flag = false, write_flag = false, verify_flag = false;
 static bool single_wire_flag = false;
@@ -26,10 +26,10 @@ int main(int argc, char * const argv[])
             baud = atoi(optarg);
             break;
         case 'f':
-            image = optarg;
+            strcpy(image, optarg);
             break;
         case 't':
-            target = optarg;
+            strcpy(target, optarg);
             break;
         case 'e':
             erase_flag = true;
@@ -57,6 +57,8 @@ int main(int argc, char * const argv[])
             rl78g13_baudrate_set(baud, voltage);
 
             rl78g13_reset();
+
+            rl78g13_silicon_signature();
         } else {
             longjmp(jmp_context, ERROR_TARGET);
         }

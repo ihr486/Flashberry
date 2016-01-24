@@ -59,6 +59,7 @@ void delay_ms(int ms);
 void rl78g13_setup(bool single_wire_flag);
 void rl78g13_baudrate_set(int baudrate, float voltage);
 void rl78g13_reset(void);
+void rl78g13_silicon_signature(void);
 
 #define RESET_PIN (4)
 #define TXD_PIN (14)

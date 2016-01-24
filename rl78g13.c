@@ -1,4 +1,8 @@
 #include "flashberry.h"
+#include "util.h"
+
+static uint32_t code_flash_start = 0, code_flash_end = 0;
+static uint32_t data_flash_start = 0xF1000, data_flash_end = 0;
 
 typedef enum {
     RL78_COMMAND_PACKET,
@@ -137,6 +141,8 @@ void rl78g13_reset(void)
 
     check_status(status[2]);
 
+    destroy_packet(status);
+
     printf("Reset complete.\n");
 }
 
@@ -170,6 +176,8 @@ void rl78g13_baudrate_set(int baudrate, float voltage)
     check_status(status[2]);
 
     uart_set_baudrate(baudrate);
+
+    destroy_packet(status);
 
     printf("Baudrate set complete.\n");
 }
@@ -215,4 +223,32 @@ void rl78g13_setup(bool single_wire_flag)
     delay_ms(1);
 
     printf("Setup complete.\n");
+}
+
+void rl78g13_silicon_signature(void)
+{
+    uint8_t *command = create_command_packet(0, 0xC0);
+
+    send_packet(command);
+
+    uint8_t *status = receive_packet();
+
+    check_status(status[2]);
+
+    destroy_packet(status);
+
+    uint8_t *data = receive_packet();
+
+    uint32_t device_code = unpack_LE24(&data[2]);
+
+    code_flash_end = unpack_LE24(&data[15]);
+    data_flash_end = unpack_LE24(&data[18]);
+
+    uint8_t device_name[11];
+    memcpy(device_name, &data[5], 10);
+
+    device_name[10] = 0;
+
+    printf("Device information:\n\tCode = %06X\n\tName = %s\n\tFirmware version = %01hhu.%01hhu%01hhu\n", device_code, device_name, data[21], data[22], data[23]);
+    printf("\tCode Flash : 0x%05X -> 0x%05X\n\tData Flash : 0x%05X -> 0x%05X\n", code_flash_start, code_flash_end, data_flash_start, data_flash_end);
 }
