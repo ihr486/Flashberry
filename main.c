@@ -9,8 +9,6 @@ void delay_ms(int ms)
     while((clock() - initial_clock) * 1000 < ms * CLOCKS_PER_SEC);
 }
 
-static unsigned int baud = 115200;
-
 static bool write_flag = false, verify_flag = false;
 static bool single_wire_flag = false, reset_flag = false, check_flag = false;
 static float voltage = 5;
@@ -38,10 +36,7 @@ int main(int argc, char * const argv[])
 
     int c = 0;
     while(c >= 0) {
-        switch(c = getopt(argc, argv, "b:f:vwl:shcr")) {
-        case 'b':
-            baud = atoi(optarg);
-            break;
+        switch(c = getopt(argc, argv, "f:vwl:shcr")) {
         case 'f':
             read_intel_hex(optarg);
             break;
@@ -73,7 +68,7 @@ int main(int argc, char * const argv[])
 
             rl78g13_setup(single_wire_flag);
 
-            rl78g13_baudrate_set(baud, voltage);
+            rl78g13_baudrate_set(115200, voltage);
 
             rl78g13_reset();
 
