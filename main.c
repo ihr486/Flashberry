@@ -9,16 +9,16 @@ void delay_ms(int ms)
     while((clock() - initial_clock) * 1000 < ms * CLOCKS_PER_SEC);
 }
 
+static unsigned int baud = 115200;
+static const char *image = "-";
+static const char *target = "none";
+
+static bool erase_flag = false, write_flag = false, verify_flag = false;
+static bool single_wire_flag = false;
+static float voltage = 5;
+
 int main(int argc, char * const argv[])
 {
-    unsigned int baud = 115200;
-    const char *image = "-";
-    const char *target = "none";
-
-    bool erase_flag = false, write_flag = false, verify_flag = false;
-    bool single_wire_flag = false;
-    float voltage = 5;
-
     int c = 0;
     while(c >= 0) {
         switch(c = getopt(argc, argv, "b:d:f:t:vwel:s")) {
@@ -52,9 +52,11 @@ int main(int argc, char * const argv[])
     int status = 0;
     if(!(status = setjmp(jmp_context))) {
         if(!strcmp(target, "rl78g13")) {
-            rl78g13_setup(false);
+            rl78g13_setup(single_wire_flag);
 
-            rl78g13_baudrate_set(115200, 5.0f);
+            rl78g13_baudrate_set(baud, voltage);
+
+            rl78g13_reset();
         } else {
             longjmp(jmp_context, ERROR_TARGET);
         }

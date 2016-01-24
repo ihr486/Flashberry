@@ -37,6 +37,7 @@ int uart_read_bytes(void *buf, int n);
 int uart_write_bytes(void *buf, int n);
 uint8_t uart_read_byte(void);
 void uart_write_byte(uint8_t c);
+void uart_set_baudrate(int rate);
 
 #define BLOCK_SIZE (1024)
 #define BLANK_BYTE (0xFF)
@@ -57,6 +58,7 @@ void delay_ms(int ms);
 
 void rl78g13_setup(bool single_wire_flag);
 void rl78g13_baudrate_set(int baudrate, float voltage);
+void rl78g13_reset(void);
 
 #define RESET_PIN (4)
 #define TXD_PIN (14)

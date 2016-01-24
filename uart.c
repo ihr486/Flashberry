@@ -18,7 +18,7 @@ void uart_open(void)
     tcgetattr(port, &oldtio);
     newtio = oldtio;
     newtio.c_iflag = IGNPAR | IGNBRK;
-    newtio.c_cflag = CS8 | CLOCAL | CREAD | CSTOPB;
+    newtio.c_cflag = CS8 | CLOCAL | CREAD;
     newtio.c_oflag = 0;
     newtio.c_lflag = 0;
     newtio.c_cc[VMIN] = 0;
@@ -59,7 +59,6 @@ uint8_t uart_read_byte(void)
 {
     uint8_t ret;
     uart_read_bytes(&ret, 1);
-    printf("Read: %c\n", ret);
     return ret;
 }
 
@@ -70,6 +69,16 @@ void uart_write_byte(uint8_t c)
 
 void uart_close(void)
 {
-    tcsetattr(port, TCSAFLUSH, &oldtio);
-    close(port);
+    if(port >= 0) {
+        tcsetattr(port, TCSAFLUSH, &oldtio);
+        close(port);
+    }
+}
+
+void uart_set_baudrate(int rate)
+{
+    struct termios newtio;
+    tcgetattr(port, &newtio);
+    cfsetspeed(&newtio, rate);
+    tcsetattr(port, TCSAFLUSH, &newtio);
 }

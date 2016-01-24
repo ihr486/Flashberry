@@ -82,6 +82,11 @@ static uint8_t *receive_packet(void)
         longjmp(jmp_context, ERROR_CHECKSUM);
     }
 
+    for(int i = 0; i < n + 4; i++) {
+        printf("%02X ", packet[i]);
+    }
+    printf("\n");
+
     return packet;
 }
 
@@ -131,6 +136,8 @@ void rl78g13_reset(void)
     uint8_t *status = receive_packet();
 
     check_status(status[2]);
+
+    printf("Reset complete.\n");
 }
 
 void rl78g13_baudrate_set(int baudrate, float voltage)
@@ -162,6 +169,8 @@ void rl78g13_baudrate_set(int baudrate, float voltage)
 
     check_status(status[2]);
 
+    uart_set_baudrate(baudrate);
+
     printf("Baudrate set complete.\n");
 }
 
@@ -175,19 +184,19 @@ void rl78g13_setup(bool single_wire_flag)
 
     gpio_set_state(RESET_PIN, GPIO_LO);
 
-    delay_ms(10);
+    delay_ms(1);
 
     gpio_set_state(TXD_PIN, GPIO_LO);
 
-    delay_ms(10);
+    delay_ms(1);
 
     gpio_set_state(RESET_PIN, GPIO_HI);
 
-    delay_ms(10);
+    delay_ms(1);
 
     gpio_set_state(TXD_PIN, GPIO_HI);
 
-    delay_ms(10);
+    delay_ms(1);
 
     gpio_configure(RESET_PIN, GPIO_IN);
     gpio_configure(TXD_PIN, 4);
@@ -195,7 +204,7 @@ void rl78g13_setup(bool single_wire_flag)
     gpio_close();
     uart_open();
 
-    delay_ms(10);
+    delay_ms(1);
 
     if(single_wire_flag) {
         uart_write_byte(0x3A);
@@ -203,7 +212,7 @@ void rl78g13_setup(bool single_wire_flag)
         uart_write_byte(0x00);
     }
 
-    delay_ms(10);
+    delay_ms(1);
 
     printf("Setup complete.\n");
 }

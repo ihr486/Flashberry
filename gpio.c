@@ -70,7 +70,7 @@ void gpio_open(void)
 
 void gpio_close(void)
 {
-    munmap(GPIO, 4096);
+    munmap((void *)GPIO, 4096);
 }
 
 void gpio_configure(int pin, int function)
