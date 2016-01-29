@@ -21,6 +21,7 @@ In order to use the programmer, connect the pins as follows:
 | RXD0 | TOOLTXD |
 | GPIOx | RESET(pullup required) |
 
+The default setting specifies GPIO4 for RESET pin; if you need to use another pin, reconfigure the pin number in flashberry.h and rebuild.
 Alternatively, single-wire mode (please refer to the official documentation for detail) is available.
 
 ## Input format
