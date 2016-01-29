@@ -4,6 +4,13 @@ Flashberry is an RL78 programmer for the Raspberry Pi.
 Most of the RL78 microcontrollers (currently excluding G10 series) can be programmed
 through the embedded UART(UART0) and just one GPIO pin.
 
+## Why RL78?
+
+RL78 is superior to PIC16 and ATmega etc. in that it has more accurate internal OSCs,
+and that they can utilize the UART for programming.
+You do not need any external programmers to use these microcontrollers together with the Raspberry Pi,
+which makes them ideal for original HAT development, analog signal processing, and real-time control.
+
 ## Programming circuit
 
 In order to use the programmer, connect the pins as follows:
