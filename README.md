@@ -32,3 +32,20 @@ Option bytes must be embedded into the ROM image.
 ## Limitations
 
 Baudrate is fixed to 115200 due to hardware limitations.
+
+## Setup instructions on Raspberry Pi A+ running Raspbian Jessie Lite
+
+1. Disable the serial login console using raspi-config.
+2. Disable the getty service through the systemd interface.
+```bash
+$ sudo systemctl disable serial-getty@ttyAMA0
+```
+3. Make sure that the kernel enables ttyAMA0 at startup.
+```
+[Inside /boot/config.txt]
+enable_uart=1
+```
+4. Reboot your system.
+```bash
+$ sudo shutdown -r now
+```
