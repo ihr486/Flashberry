@@ -96,6 +96,8 @@ int main(int argc, char * const argv[])
             fprintf(stderr, "Wrong checksum on inward packet.\n");
             break;
         }
+
+	uart_close();
     }
 
     return 0;

@@ -20,13 +20,13 @@ static GPIO_Struct *GPIO;
 
 void gpio_open(void)
 {
-    int fd = open("/dev/mem", O_RDWR | O_SYNC);
+    int fd = open("/dev/mem", O_RDWR|O_SYNC);
     if(fd < 0) {
         fprintf(stderr, "Failed to open /dev/mem.\n");
         longjmp(jmp_context, ERROR_IO);
     }
 
-    GPIO = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x20200000);
+    GPIO = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x3F200000);
     if(GPIO == MAP_FAILED) {
         fprintf(stderr, "Failed to map GPIO registers.\n");
         longjmp(jmp_context, ERROR_IO);

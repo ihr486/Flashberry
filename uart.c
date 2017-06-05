@@ -4,7 +4,7 @@
 
 static int port = -1;
 static struct termios oldtio;
-static const char device[] = "/dev/ttyAMA0";
+static const char device[] = "/dev/serial0";
 
 void uart_open(void)
 {
@@ -18,12 +18,11 @@ void uart_open(void)
     tcgetattr(port, &oldtio);
     newtio = oldtio;
     newtio.c_iflag = IGNPAR | IGNBRK;
-    newtio.c_cflag = CS8 | CLOCAL | CREAD;
+    newtio.c_cflag = B115200 | CS8 | CLOCAL | CREAD;
     newtio.c_oflag = 0;
     newtio.c_lflag = 0;
     newtio.c_cc[VMIN] = 0;
     newtio.c_cc[VTIME] = 0;
-    cfsetspeed(&newtio, 115200);
     tcsetattr(port, TCSAFLUSH, &newtio);
 }
 

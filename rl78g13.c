@@ -14,6 +14,7 @@ static inline void pack_LE24(uint8_t *buf, uint32_t val)
 
 static uint32_t code_flash_start = 0, code_flash_end = 0;
 static uint32_t data_flash_start = 0xF1000, data_flash_end = 0;
+static bool single_wire_flag = false;
 
 static uint8_t *create_command_packet(int size, uint8_t command)
 {
@@ -47,17 +48,6 @@ static void destroy_packet(void *packet)
     free(packet);
 }
 
-static void send_packet(uint8_t *packet)
-{
-    int n = ((packet[1] - 1) & 0xFF) + 1;
-    packet[n + 2] = 0;
-    for(int i = 0; i < n + 1; i++) {
-        packet[n + 2] -= packet[1 + i];
-    }
-    uart_write_bytes(packet, n + 4);
-    destroy_packet(packet);
-}
-
 static uint8_t *receive_packet(void)
 {
     uint8_t type = 0;
@@ -86,8 +76,25 @@ static uint8_t *receive_packet(void)
     if(checksum) {
         longjmp(jmp_context, ERROR_CHECKSUM);
     }
+	printf("P%d:", n);
+	for (int i = 0; i < n + 4; i++)
+		printf(" %02X", packet[i]);
+	printf("\n");
 
     return packet;
+}
+
+static void send_packet(uint8_t *packet)
+{
+    int n = ((packet[1] - 1) & 0xFF) + 1;
+    packet[n + 2] = 0;
+    for(int i = 0; i < n + 1; i++) {
+        packet[n + 2] -= packet[1 + i];
+    }
+    uart_write_bytes(packet, n + 4);
+    destroy_packet(packet);
+
+	if (single_wire_flag) free(receive_packet());
 }
 
 static uint8_t check_status(uint8_t code)
@@ -206,7 +213,7 @@ static void rl78g13_silicon_signature(void)
     destroy_packet(data);
 }
 
-void rl78g13_setup(float voltage, bool single_wire_flag)
+void rl78g13_setup(float voltage, bool single_wire)
 {
     gpio_open();
 
@@ -230,14 +237,15 @@ void rl78g13_setup(float voltage, bool single_wire_flag)
     delay_ms(1);
 
     gpio_configure(RESET_PIN, GPIO_IN);
-    gpio_configure(TXD_PIN, 4);
+    gpio_configure(TXD_PIN, 2);
 
     gpio_close();
 
     delay_ms(1);
 
-    if(single_wire_flag) {
+    if(single_wire) {
         uart_write_byte(0x3A);
+	single_wire_flag = true;
     } else {
         uart_write_byte(0x00);
     }
