@@ -20,6 +20,7 @@ static void image_set_byte(uint32_t address, uint8_t byte)
             prev = cursor;
         }
         image_block_t *new_block = (image_block_t *)malloc(sizeof(image_block_t));
+        new_block->address = (address / BLOCK_SIZE) * BLOCK_SIZE;
         if(!prev) {
             block_list = new_block;
             new_block->next = NULL;
@@ -34,9 +35,9 @@ static void image_set_byte(uint32_t address, uint8_t byte)
 
 const image_block_t *find_first_block(uint32_t low, uint32_t high)
 {
-    if(!cursor || cursor->address >= high) {
+    //if(!cursor || cursor->address >= high) {
         cursor = block_list;
-    }
+    //}
 
     for(; cursor; cursor = cursor->next) {
         if(low <= cursor->address && cursor->address < high) {

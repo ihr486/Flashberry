@@ -76,10 +76,6 @@ static uint8_t *receive_packet(void)
     if(checksum) {
         longjmp(jmp_context, ERROR_CHECKSUM);
     }
-	printf("P%d:", n);
-	for (int i = 0; i < n + 4; i++)
-		printf(" %02X", packet[i]);
-	printf("\n");
 
     return packet;
 }
@@ -94,7 +90,7 @@ static void send_packet(uint8_t *packet)
     uart_write_bytes(packet, n + 4);
     destroy_packet(packet);
 
-	if (single_wire_flag) free(receive_packet());
+    if (single_wire_flag) free(receive_packet());
 }
 
 static uint8_t check_status(uint8_t code)
@@ -245,7 +241,7 @@ void rl78g13_setup(float voltage, bool single_wire)
 
     if(single_wire) {
         uart_write_byte(0x3A);
-	single_wire_flag = true;
+        single_wire_flag = true;
     } else {
         uart_write_byte(0x00);
     }
